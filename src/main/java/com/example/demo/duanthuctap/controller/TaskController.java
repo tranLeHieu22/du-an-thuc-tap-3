@@ -4,6 +4,7 @@ import com.example.demo.duanthuctap.entity.TaskEntity;
 import com.example.demo.duanthuctap.entity.TaskStatus;
 import com.example.demo.duanthuctap.service.TaskService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,8 @@ public class TaskController {
         this.taskService = taskService;
     }
 
+    // MANAGER ONLY
+    @PreAuthorize("hasAuthority('MANAGER')")
     @PostMapping
     public TaskEntity create(@Valid @RequestBody TaskEntity task) {
         return taskService.create(task);
@@ -34,17 +37,20 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGER')")
     public void delete(@PathVariable Long id) {
         taskService.delete(id);
     }
 
     @PutMapping("/{taskId}/assign/{userId}")
+    @PreAuthorize("hasAuthority('MANAGER')")
     public String assignTask(@PathVariable Long taskId,
                              @PathVariable Long userId) {
         taskService.assignTask(taskId, userId);
         return "Assign success";
     }
 
+    // USER được update status
     @PutMapping("/{taskId}/status")
     public String updateStatus(@PathVariable Long taskId,
                                @RequestParam TaskStatus status) {
