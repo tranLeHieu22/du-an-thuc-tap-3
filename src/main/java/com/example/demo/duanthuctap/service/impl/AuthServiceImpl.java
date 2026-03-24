@@ -29,14 +29,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void register(AuthRequest request) {
 
-        if (request.getUsername() == null || request.getUsername().isEmpty()) {
-            throw new BusinessException("Username is required");
-        }
-
-        if (request.getPassword() == null || request.getPassword().isEmpty()) {
-            throw new BusinessException("Password is required");
-        }
-
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new BusinessException("Username already exists");
         }
@@ -59,7 +51,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("Invalid password");
         }
 
-        String token = jwtUtil.generateToken(user.getUsername());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         return new AuthResponse(token);
     }

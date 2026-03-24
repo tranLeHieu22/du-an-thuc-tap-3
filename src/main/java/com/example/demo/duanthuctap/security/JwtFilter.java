@@ -35,19 +35,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
             try {
                 String username = jwtUtil.extractUsername(token);
+                String role = jwtUtil.extractRole(token);
 
-                // HARD CODE ROLE (tạm cho tuần 8)
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 username,
                                 null,
-                                List.of(() -> "MANAGER")
+                                List.of(() -> role)
                         );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                // token lỗi thì bỏ qua (không set auth)
+                // token lỗi -> bỏ qua
             }
         }
 
