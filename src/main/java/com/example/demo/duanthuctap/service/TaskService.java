@@ -1,17 +1,18 @@
 package com.example.demo.duanthuctap.service;
 
-import com.example.demo.duanthuctap.entity.TaskEntity;
+import com.example.demo.duanthuctap.dto.TaskRequest;
+import com.example.demo.duanthuctap.dto.TaskResponse;
 import com.example.demo.duanthuctap.entity.TaskStatus;
 
 import java.util.List;
 
 public interface TaskService {
 
-    TaskEntity create(TaskEntity task);
+    TaskResponse create(TaskRequest request);
 
-    List<TaskEntity> getAll();
+    List<TaskResponse> getAll();
 
-    TaskEntity getById(Long id);
+    TaskResponse getById(Long id);
 
     void delete(Long id);
 
@@ -19,7 +20,7 @@ public interface TaskService {
 
     void updateStatus(Long taskId, TaskStatus status);
 
-    List<TaskEntity> getByProject(Long projectId);
+    List<TaskResponse> getByProject(Long projectId);
 
-    List<TaskEntity> getByUser(Long userId);
+    List<TaskResponse> getByUser(Long userId);
 }

@@ -1,7 +1,10 @@
 package com.example.demo.duanthuctap.service.impl;
 
+import com.example.demo.duanthuctap.dto.TaskRequest;
+import com.example.demo.duanthuctap.dto.TaskResponse;
 import com.example.demo.duanthuctap.entity.*;
 import com.example.demo.duanthuctap.exception.BusinessException;
+import com.example.demo.duanthuctap.repository.ProjectRepository;
 import com.example.demo.duanthuctap.repository.TaskRepository;
 import com.example.demo.duanthuctap.repository.UserRepository;
 import com.example.demo.duanthuctap.service.TaskService;
@@ -9,65 +12,69 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
 
     public TaskServiceImpl(TaskRepository taskRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           ProjectRepository projectRepository) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
+        this.projectRepository = projectRepository;
     }
 
     @Override
-    public TaskEntity create(TaskEntity task) {
+    public TaskResponse create(TaskRequest request) {
 
-        if (task.getTitle() == null || task.getTitle().isEmpty()) {
+        if (request.getTitle() == null || request.getTitle().isEmpty()) {
             throw new BusinessException("Title is required");
         }
 
-        if (task.getProject() == null || task.getProject().getId() == null) {
-            throw new BusinessException("Project is required");
-        }
+        ProjectEntity project = projectRepository.findById(request.getProjectId())
+                .orElseThrow(() -> new BusinessException("Project not found"));
 
-        if (task.getDeadline() != null &&
-                task.getDeadline().isBefore(LocalDate.now())) {
+        if (request.getDeadline() != null &&
+                request.getDeadline().isBefore(LocalDate.now())) {
             throw new BusinessException("Deadline phải >= ngày hiện tại");
         }
 
-        if (task.getStatus() == null) {
-            task.setStatus(TaskStatus.TODO);
-        }
+        TaskEntity task = new TaskEntity();
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+        task.setDeadline(request.getDeadline());
+        task.setProject(project);
+        task.setStatus(TaskStatus.TODO);
 
-        return taskRepository.save(task);
+        return mapToResponse(taskRepository.save(task));
     }
 
     @Override
-    public List<TaskEntity> getAll() {
-        return taskRepository.findAll();
+    public List<TaskResponse> getAll() {
+        return taskRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public TaskEntity getById(Long id) {
-        return taskRepository.findById(id)
-                .orElseThrow(() ->
-                        new BusinessException("Task not found: " + id));
+    public TaskResponse getById(Long id) {
+        TaskEntity task = taskRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Task not found"));
+
+        return mapToResponse(task);
     }
 
     @Override
     public void delete(Long id) {
-
-        if (!taskRepository.existsById(id)) {
-            throw new BusinessException("Task not exist: " + id);
-        }
-
         taskRepository.deleteById(id);
     }
 
-    // ================= ASSIGN TASK =================
     @Override
     public void assignTask(Long taskId, Long userId) {
 
@@ -77,41 +84,50 @@ public class TaskServiceImpl implements TaskService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
 
-        // RULE: phải cùng project
-        if (task.getProject() == null) {
-            throw new BusinessException("Task chưa có project");
-        }
-
         task.setUser(user);
         taskRepository.save(task);
     }
 
-    // ================= UPDATE STATUS =================
     @Override
     public void updateStatus(Long taskId, TaskStatus status) {
 
         TaskEntity task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new BusinessException("Task not found"));
 
-        TaskStatus current = task.getStatus();
-
-        // RULE: DONE không quay lại TODO
-        if (current == TaskStatus.DONE && status == TaskStatus.TODO) {
-            throw new BusinessException("Không thể chuyển DONE -> TODO");
+        if (task.getStatus() == TaskStatus.DONE && status == TaskStatus.TODO) {
+            throw new BusinessException("Không thể DONE -> TODO");
         }
 
         task.setStatus(status);
         taskRepository.save(task);
     }
 
-    // ================= QUERY =================
     @Override
-    public List<TaskEntity> getByProject(Long projectId) {
-        return taskRepository.findByProjectId(projectId);
+    public List<TaskResponse> getByProject(Long projectId) {
+        return taskRepository.findByProjectId(projectId)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<TaskEntity> getByUser(Long userId) {
-        return taskRepository.findByUserId(userId);
+    public List<TaskResponse> getByUser(Long userId) {
+        return taskRepository.findByUserId(userId)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // ================= MAP =================
+    private TaskResponse mapToResponse(TaskEntity task) {
+        return TaskResponse.builder()
+                .id(task.getId())
+                .title(task.getTitle())
+                .description(task.getDescription())
+                .status(task.getStatus())
+                .deadline(task.getDeadline())
+                .username(task.getUser() != null ? task.getUser().getUsername() : null)
+                .projectName(task.getProject() != null ? task.getProject().getName() : null)
+                .build();
     }
 }
